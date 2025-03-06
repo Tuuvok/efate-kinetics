@@ -1,36 +1,6 @@
 library(minpack.lm)
 
 
-#' get residue data defined by user
-#'
-#' @return residue_data; dataframe containing time and concentration measurements
-get_residue_data <- function() {
-    residue_data <- read.table(file.choose(), header = TRUE, sep = "")
-    return(residue_data)
-}
-
-
-#' get time measurements
-#'
-#' @param residue_data dataframe containing time and concentration measurements
-#' @return time_data; vector containing time measurements
-get_time_data <- function(residue_data) {
-    time_data <- as.vector(as.matrix(residue_data["time"]))
-    return(time_data)
-}
-
-
-#' get concentration measurements
-#'
-#' @param residue_data dataframe containing time and concentration measurements
-#' @return observation_data; vector containing concentration measurements of all compounds
-get_observation_data <- function(residue_data) {
-    observation_columns <- residue_data[!names(residue_data) %in% "time"]
-    observation_data <- as.vector(as.matrix(observation_columns))
-    return(observation_data)
-}
-
-
 #' SFO parent model
 #'
 #' @param time elapsed time
@@ -77,4 +47,3 @@ fit_model <- function(residue_data) {
                  start = list(Cp0 = 100, kp = 0.1, km = 0.05, kfm = 0.01),
                  control = nls.lm.control(maxiter = 1024))
 }
-
