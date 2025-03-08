@@ -24,3 +24,58 @@ create_iteration_data <- function(fit) {
     names(iteration_data) <- c("iterations to convergence", "convergence tolerance")
     return(iteration_data)
 }
+
+
+#' get chi2 values for each compound
+#'
+#' @param fitting_data dataframe containing observation, prediction and residuals
+#' @return chi2_values; named numeric vector with chi2 value for each compound
+get_chi2_values <- function(fitting_data) {
+    chi2_values <- sapply(unique(fitting_data$compound), function(compound_i) {
+        fitting_data_filtered <- fitting_data %>%
+            filter(compound == compound_i) %>%
+            group_by(time, compound) %>%
+            summarise(
+                observation = mean(observation),
+                prediction = mean(prediction),
+                .groups = 'drop'
+            )
+        observed <- fitting_data_filtered$observation
+        predicted <- fitting_data_filtered$prediction
+        error_percentage <- calculate_error_percentage(predicted, observed)
+        chi2 <- calculate_chi2(predicted, observed, error_percentage)
+        return(chi2)
+    })
+    return(chi2_values)
+}
+
+
+#' calculate error percentage
+#'
+#' @param predicted vector of predicted values by the model
+#' @param observed vector of observed values from experiment 
+#' @return error_percentage; vector of measurement error percentage
+calculate_error_percentage <- function(predicted, observed) {
+    error_percentage <- ifelse(observed == 0,
+                               0,
+                               (predicted - observed) / observed * 100)
+    return(error_percentage)
+}
+
+
+#' calculate chi2
+#'
+#' @param predicted vector of predicted values by the model
+#' @param observed vector of observed values from experiment
+#' @param error_percentage vector of measurement error percentage
+#' @return chi2; numeric value
+calculate_chi2 <- function(predicted, observed, error_percentage) {
+    chi2 <- sum(
+        ifelse(observed == 0,
+               0,
+               (predicted - observed) ^2 / 
+                   (error_percentage/100 * mean(observed)) ^2
+        )
+    )
+    return(chi2)
+}
