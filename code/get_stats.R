@@ -26,6 +26,29 @@ create_iteration_data <- function(fit) {
 }
 
 
+#' get DT50 values for each compound
+#'
+#' @param fit nonlinear regression model
+#' @param fitting_data dataframe containing observation, prediction and residuals
+#' @return DT50_values; named numeric vector with DT50 value for each compound
+get_DT50_values <- function(fit, fitting_data) {
+    fit_summary <- summary(fit)
+    parameters = fit_summary$coefficients
+    iteration <- 1
+    DT50_values <- sapply(unique(fitting_data$compound), function(compound_i) {
+        if (iteration == 1) {
+            k <- parameters["kp", "Estimate"]
+        } else {
+            k <- parameters["km", "Estimate"]
+        }
+        DT50 <- log(2)/k
+        iteration <<- iteration + 1
+        return(DT50)
+    })
+    return(DT50_values)
+}
+            
+
 #' get chi2 values for each compound
 #'
 #' @param fitting_data dataframe containing observation, prediction and residuals
@@ -40,8 +63,8 @@ get_chi2_values <- function(fitting_data) {
                 prediction = mean(prediction),
                 .groups = 'drop'
             )
-        observed <- fitting_data_filtered$observation
         predicted <- fitting_data_filtered$prediction
+        observed <- fitting_data_filtered$observation
         error_percentage <- calculate_error_percentage(predicted, observed)
         chi2 <- calculate_chi2(predicted, observed, error_percentage)
         return(chi2)

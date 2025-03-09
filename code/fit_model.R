@@ -1,7 +1,3 @@
-library(minpack.lm)
-library(dplyr)
-
-
 #' SFO parent model
 #'
 #' @param time elapsed time
