@@ -25,7 +25,8 @@ create_endpoint_data <- function(reg_model, fitting_data) {
         row.names = c(unique(fitting_data$compound)),
         DT50 = get_DT_values(reg_model, fitting_data, 2),
         DT90 = get_DT_values(reg_model, fitting_data, 10),
-        chi2 = get_chi2_values(fitting_data)
+        chi2 = get_chi2_values(fitting_data),
+        t_test = get_p_values(reg_model, fitting_data)
     )
     return(endpoint_data)
 }
@@ -42,14 +43,24 @@ create_iteration_data <- function(reg_model) {
 }
 
 
+#' get parameters of regression model
+#'
+#' @param reg_model nonlinear regression model
+#' @return parameters; dataframe containing model estimates and statistics
+get_parameters <- function(reg_model) {
+    reg_model_summary <- summary(reg_model)
+    parameters <- reg_model_summary$coefficients
+    return(parameters)
+}
+
+
 #' get DT values for each compound
 #'
 #' @param reg_model nonlinear regression model
 #' @param fitting_data dataframe containing observation, prediction and residuals
 #' @return DT_values; named numeric vector with DT value for each compound
 get_DT_values <- function(reg_model, fitting_data, target_value) {
-    reg_model_summary <- summary(reg_model)
-    parameters = reg_model_summary$coefficients
+    parameters <- get_parameters(reg_model)
     iteration <- 1
     DT_values <- sapply(unique(fitting_data$compound), function(compound_i) {
         if (iteration == 1) {
@@ -62,6 +73,27 @@ get_DT_values <- function(reg_model, fitting_data, target_value) {
         return(DT)
     })
     return(DT_values)
+}
+
+
+#' get p values for each compound
+#'
+#' @param reg_model nonlinear regression model
+#' @param fitting_data dataframe containing observation, prediction and residuals
+#' @return p_values; named numeric vector with p value for each compound
+get_p_values <- function(reg_model, fitting_data) {
+    parameters <- get_parameters(reg_model)
+    iteration <- 1
+    p_values <- sapply(unique(fitting_data$compound), function(compound_i) {
+        if (iteration == 1) {
+            p <- parameters["kp", "Pr(>|t|)"]
+        } else {
+            p <- parameters["km", "Pr(>|t|)"]
+        }
+        iteration <<- iteration + 1
+        return(p)
+    })
+    return(p_values)
 }
 
 
