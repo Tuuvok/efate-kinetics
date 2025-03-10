@@ -1,26 +1,42 @@
 #' create dataframe with observation, prediction and residuals
 #'
 #' @param residue_data dataframe containing time and concentration measurements
-#' @param fit nonlinear regression model
+#' @param reg_model nonlinear regression model
 #' @return fitting_data; dataframe containing observation, prediction and residuals
-create_fitting_data <- function(residue_data, fit) {
+create_fitting_data <- function(residue_data, reg_model) {
     fitting_data <- data.frame(
         time = rep(residue_data$time, length(residue_data)-1),
         compound = get_compound_data(residue_data),
         observation = get_observation_data(residue_data),
-        prediction = fitted(fit),
-        residuals = residuals(fit)
+        prediction = fitted(reg_model),
+        residuals = residuals(reg_model)
     )
     return(fitting_data)
 }
 
 
+#' create dataframe with endpoints required by FOCUS Kinetics 2014
+#'
+#' @param reg_model nonlinear regression model
+#' @param fitting_data dataframe containing observation, prediction and residuals
+#' @return endpoint_data; dataframe containing endpoints
+create_endpoint_data <- function(reg_model, fitting_data) {
+    endpoint_data <- data.frame(
+        row.names = c(unique(fitting_data$compound)),
+        DT50 = get_DT_values(reg_model, fitting_data, 2),
+        DT90 = get_DT_values(reg_model, fitting_data, 10),
+        chi2 = get_chi2_values(fitting_data)
+    )
+    return(endpoint_data)
+}
+
+
 #' create dataframe with no of iterations and conv tolerance
 #'
-#' @param fit nonlinear regression model
+#' @param reg_model nonlinear regression model
 #' @return iteration_data; named vector with no of iterations and conv tolerance
-create_iteration_data <- function(fit) {
-    iteration_data <- c(fit$convInfo$finIter, fit$convInfo$finTol)
+create_iteration_data <- function(reg_model) {
+    iteration_data <- c(reg_model$convInfo$finIter, reg_model$convInfo$finTol)
     names(iteration_data) <- c("iterations to convergence", "convergence tolerance")
     return(iteration_data)
 }
@@ -28,12 +44,12 @@ create_iteration_data <- function(fit) {
 
 #' get DT values for each compound
 #'
-#' @param fit nonlinear regression model
+#' @param reg_model nonlinear regression model
 #' @param fitting_data dataframe containing observation, prediction and residuals
 #' @return DT_values; named numeric vector with DT value for each compound
-get_DT_values <- function(fit, fitting_data, target_value) {
-    fit_summary <- summary(fit)
-    parameters = fit_summary$coefficients
+get_DT_values <- function(reg_model, fitting_data, target_value) {
+    reg_model_summary <- summary(reg_model)
+    parameters = reg_model_summary$coefficients
     iteration <- 1
     DT_values <- sapply(unique(fitting_data$compound), function(compound_i) {
         if (iteration == 1) {
