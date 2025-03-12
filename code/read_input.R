@@ -2,7 +2,7 @@
 #'
 #' @return residue_data; dataframe containing time and concentration measurements
 get_residue_data <- function() {
-    residue_data <- read.table(file.choose(), header = TRUE, sep = "")
+    residue_data <- read.table(file.choose(), header = TRUE, sep = "\t")
     return(residue_data)
 }
 
