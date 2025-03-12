@@ -1,6 +1,3 @@
-library(minpack.lm)
-
-
 #' SFO parent model
 #'
 #' @param time elapsed time
@@ -40,10 +37,12 @@ sfo_model <- function(time, Cp0, kp, km, kfm) {
 #' fit model to observation data
 #'
 #' @param residue_data dataframe containing time and concentration measurements
+#' @return reg_model; nonlinear regression model
 fit_model <- function(residue_data) {
     time_data <- get_time_data(residue_data)
     observation_data <- get_observation_data(residue_data)
-    fit <- nlsLM(observation_data ~ sfo_model(time_data, Cp0, kp, km, kfm),
-                 start = list(Cp0 = 100, kp = 0.1, km = 0.05, kfm = 0.01),
-                 control = nls.lm.control(maxiter = 1024))
+    reg_model <- nlsLM(observation_data ~ sfo_model(time_data, Cp0, kp, km, kfm),
+                       start = list(Cp0 = 100, kp = 0.1, km = 0.05, kfm = 0.01),
+                       control = nls.lm.control(maxiter = 1024))
+    return(reg_model)
 }

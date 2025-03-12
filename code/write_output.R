@@ -1,14 +1,15 @@
 #' generate output list
 #'
 #' @param residue_data dataframe containing time and concentration measurements
-#' @param fit nonlinear regression model
+#' @param reg_model nonlinear regression model
+#' @param fitting_data dataframe containing observation, prediction and residuals
 #' @return output_list; list containing output for user
-generate_output_list <- function(residue_data, fit) {
-    fit_summary <- summary(fit)
+generate_output_list <- function(residue_data, reg_model, fitting_data) {
     output_list <- list(
-        parameters = fit_summary$coefficients,
-        fitting = create_fitting_data(residue_data, fit),
-        iteration = create_iteration_data(fit),
+        parameters = get_parameters(reg_model),
+        fitting = create_fitting_data(residue_data, reg_model),
+        endpoints = create_endpoint_data(reg_model, fitting_data),
+        iteration = create_iteration_data(reg_model)
     )
     return(output_list)
 }
