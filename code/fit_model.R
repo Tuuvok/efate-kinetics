@@ -1,48 +1,51 @@
-#' SFO parent model
+#' model for SFO
 #'
 #' @param time elapsed time
 #' @param Cp0 initial concentration of parent
 #' @param kp degradation rate of parent
-sfo_parent_model <- function(time, Cp0, kp) {
+model_sfo <- function(time, Cp0, kp) {
     Cp0 * exp(-kp * time)
 }
 
 
-#' SFO metabolite model
+#' model for DFOP
 #'
 #' @param time elapsed time
 #' @param Cp0 initial concentration of parent
-#' @param kp degradation rate of parent
-#' @param km degradation rate of metabolite
-#' @param kfm formation rate of metabolite
-sfo_metabolite_model <- function(time, Cp0, kp, km, kfm) {
-    (kfm * Cp0 / (km - kp)) * (exp(-kp * time) - exp(-km * time))
+#' @param kp1 degradation rate of parent compartment 1
+#' @param kp2 degradation rate of parent compartment 2
+#' @param g fraction of Cp0 applied to compartment 1
+model_dfop <- function(time, Cp0, kp1, kp2, g) {
+    Cp0 * ((g * exp(-kp1 * time)) + ((1-g) * exp(-kp2 * time)))
 }
 
 
-#' SFO model
+#' model for SFO-SFO
 #'
 #' @param time elapsed time
 #' @param Cp0 initial concentration of parent
 #' @param kp degradation rate of parent
 #' @param km degradation rate of metabolite
 #' @param kfm formation rate of metabolite
-sfo_model <- function(time, Cp0, kp, km, kfm) {
-    parent_prediction <- sfo_parent_model(time, Cp0, kp)
-    metabolite_prediction <- sfo_metabolite_model(time, Cp0, kp, km, kfm)
+model_sfo_sfo <- function(time, Cp0, kp, km, kfm) {
+    parent_prediction <- model_sfo(time, Cp0, kp)
+    metabolite_prediction <- (kfm * Cp0 / (km - kp)) * (exp(-kp * time) - exp(-km * time))
     c(parent_prediction, metabolite_prediction)
 }
 
 
-#' fit model to observation data
+#' model for DFOP-SFO
 #'
-#' @param residue_data dataframe containing time and concentration measurements
-#' @return reg_model; nonlinear regression model
-fit_model <- function(residue_data) {
-    time_data <- get_time_data(residue_data)
-    observation_data <- get_observation_data(residue_data)
-    reg_model <- nlsLM(observation_data ~ sfo_model(time_data, Cp0, kp, km, kfm),
-                       start = list(Cp0 = 100, kp = 0.1, km = 0.05, kfm = 0.01),
-                       control = nls.lm.control(maxiter = 1024))
-    return(reg_model)
+#' @param time elapsed time
+#' @param Cp0 initial concentration of parent
+#' @param kp1 degradation rate of parent compartment 1
+#' @param kp2 degradation rate of parent compartment 2
+#' @param g fraction of Cp0 applied to compartment 1
+#' @param km degradation rate of metabolite
+#' @param kfm formation rate of metabolite
+model_dfop_sfo <- function(time, Cp0, kp1, kp2, g, km, kfm) {
+    parent_prediction <- model_dfop(time, Cp0, kp1, kp2, g)
+    metabolite_prediction <- (kfm * Cp0 / (km - kp1)) * (g * (exp(-kp1 * time) - exp(-km * time))) + 
+        (kfm * Cp0 / (km - kp2)) * ((1-g) * (exp(-kp2 * time) - exp(-km * time)))
+    c(parent_prediction, metabolite_prediction)
 }
