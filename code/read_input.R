@@ -83,7 +83,7 @@ create_setup_data <- function(user_setup_data) {
         
         if (key == "model_type") {
             setup_data$model_type <- value
-        } else if (key %in% c("kp", "kp1", "kp2", "g", "km", "kfm")) {
+        } else if (key %in% c("Cp0", "kp", "kp1", "kp2", "g", "km", "kfm")) {
             setup_data$start_parms[[key]] <- value
         } else if (key %in% c("maxiter", "tol", "minFactor", "ftol", "ptol", "gtol", "nprint")) {
             setup_data$control_parms[[key]] <- value
