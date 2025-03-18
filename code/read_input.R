@@ -61,7 +61,6 @@ get_user_setup_data <- function() {
 #' @param user_setup_data string with setup data provided by user
 #' @return setup_data; list containing setup data relevant for nlsLM modeling
 create_setup_data <- function(user_setup_data) {
-    
     setup_data <- list(
         model_type = NULL,
         start_parms = list(),
@@ -70,23 +69,33 @@ create_setup_data <- function(user_setup_data) {
     
     for (line in user_setup_data) {
         parts <- strsplit(line, "=")[[1]]
+        if (length(parts) != 2) {
+            stop("Invalid format: each line should contain a key-value pair separated by '='")
+        }
+        
         key <- trimws(parts[1])
         value <- trimws(parts[2])
         
-        if (value == "NA") {
-            value <- NA
-        } else if (grepl("^[0-9]+$", value)) { # check if it contains only numeric characters
-            value <- as.numeric(value)
-        } else {
-            value <- value
-        }
-        
         if (key == "model_type") {
+            if (!is.character(value) || value == "" || grepl("^[0-9]+$", value)) {
+                stop("Invalid input for model_type: must be a non-empty string")
+            }
             setup_data$model_type <- value
         } else if (key %in% c("Cp0", "kp", "kp1", "kp2", "g", "km", "kfm")) {
-            setup_data$start_parms[[key]] <- value
-        } else if (key %in% c("maxiter", "tol", "minFactor", "ftol", "ptol", "gtol", "nprint")) {
-            setup_data$control_parms[[key]] <- value
+            if (value == "NA") {
+                next # skip to avoid irrelevant parameters for model
+            }
+            if (!grepl("^[0-9eE.-]+$", value)) {
+                stop(paste("Invalid input for start_parms key", key, ": must be numeric"))
+            }
+            setup_data$start_parms[[key]] <- as.numeric(value)
+        } else if (key %in% c("ftol", "ptol", "gtol", "factor", "maxiter")) {
+            if (!grepl("^[0-9eE.-]+$", value)) {
+                stop(paste("Invalid input for control_parms key", key, ": must be numeric"))
+            }
+            setup_data$control_parms[[key]] <- as.numeric(value)
+        } else {
+            stop(paste("Unknown key:", key))
         }
     }
     
