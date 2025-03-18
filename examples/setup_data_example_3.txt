@@ -1,0 +1,57 @@
+#    1. Select model type
+
+#    Valid model types:
+#       SFO
+#       DFOP
+#       SFO-SFO
+#       DFOP-SFO
+
+model_type = SFO-SFO
+
+
+
+#    2. Select starting parameters for fitting
+
+#    Set parameters not relvant for model to NA.
+
+#    initial concentration of parent
+Cp0 = 100
+
+#    degradation rate of parent compartment
+kp = 0.1
+
+#    degradation rate of parent compartment 1
+kp1 = NA
+
+#    degradation rate of parent compartment 2
+kp2 = NA
+
+#    fraction of Cp0 applied to compartment 1
+g = NA
+
+#    degradation rate of metabolite
+km = 0.05
+
+#    formation rate of metabolite
+kfm = 0.5
+
+
+
+#    3. Select control data
+
+#    Keep defaults if uncertain.
+
+#    convergence tolerance for the residual sum of squares
+ftol = 1E-10
+
+#    parameter tolerance for convergence
+ptol = 1E-10
+
+#    gradient tolerance for convergence
+gtol = 1E-10
+
+#    minimum step size factor allowed during the iterations
+factor = 100
+
+#    maximum number of iterations
+maxiter = 200
