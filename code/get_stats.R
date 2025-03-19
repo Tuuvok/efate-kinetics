@@ -26,7 +26,8 @@ create_endpoint_data <- function(reg_model, fitting_data) {
         DT50 = get_DT_values(reg_model, fitting_data, 2),
         DT90 = get_DT_values(reg_model, fitting_data, 10),
         chi2 = get_chi2_values(fitting_data),
-        t_test = get_p_values(reg_model, fitting_data)
+        t_test = get_p_values(reg_model, fitting_data),
+        ff = get_ff_values(reg_model, fitting_data)
     )
     return(endpoint_data)
 }
@@ -68,32 +69,13 @@ get_DT_values <- function(reg_model, fitting_data, target_value) {
         } else {
             k <- parameters["km", "Estimate"]
         }
-        DT <- log(target_value)/k
+        DT <- round(
+            log(target_value)/k,
+            3)
         iteration <<- iteration + 1
         return(DT)
     })
     return(DT_values)
-}
-
-
-#' get p values for each compound
-#'
-#' @param reg_model nonlinear regression model
-#' @param fitting_data dataframe containing observation, prediction and residuals
-#' @return p_values; named numeric vector with p value for each compound
-get_p_values <- function(reg_model, fitting_data) {
-    parameters <- get_parameters(reg_model)
-    iteration <- 1
-    p_values <- sapply(unique(fitting_data$compound), function(compound_i) {
-        if (iteration == 1) {
-            p <- parameters["kp", "Pr(>|t|)"]
-        } else {
-            p <- parameters["km", "Pr(>|t|)"]
-        }
-        iteration <<- iteration + 1
-        return(p)
-    })
-    return(p_values)
 }
 
 
@@ -114,7 +96,9 @@ get_chi2_values <- function(fitting_data) {
         predicted <- fitting_data_filtered$prediction
         observed <- fitting_data_filtered$observation
         error_percentage <- calculate_error_percentage(predicted, observed)
-        chi2 <- calculate_chi2(predicted, observed, error_percentage)
+        chi2 <- round(
+            calculate_chi2(predicted, observed, error_percentage),
+            3)
         return(chi2)
     })
     return(chi2_values)
@@ -149,4 +133,46 @@ calculate_chi2 <- function(predicted, observed, error_percentage) {
         )
     )
     return(chi2)
+}
+
+
+#' get p values for each compound
+#'
+#' @param reg_model nonlinear regression model
+#' @param fitting_data dataframe containing observation, prediction and residuals
+#' @return p_values; named numeric vector with p value for each compound
+get_p_values <- function(reg_model, fitting_data) {
+    parameters <- get_parameters(reg_model)
+    iteration <- 1
+    p_values <- sapply(unique(fitting_data$compound), function(compound_i) {
+        if (iteration == 1) {
+            p <- formatC(parameters["kp", "Pr(>|t|)"], format = "E", digits = 2)
+        } else {
+            p <- formatC(parameters["km", "Pr(>|t|)"], format = "E", digits = 2)
+        }
+        iteration <<- iteration + 1
+        return(p)
+    })
+    return(p_values)
+}
+
+
+#' get formation fraction for each compound
+#'
+#' @param reg_model nonlinear regression model
+#' @param fitting_data dataframe containing observation, prediction and residuals
+#' @return ff_values; named string vector with ff value for each compound
+get_ff_values <- function(reg_model, fitting_data) {
+    parameters <- get_parameters(reg_model)
+    iteration <- 1
+    ff_values <- sapply(unique(fitting_data$compound), function(compound_i) {
+        if (iteration == 1) {
+            ff <- "-"
+        } else {
+            ff <- round(parameters["kfm", "Estimate"], 3)
+        }
+        iteration <<- iteration + 1
+        return(ff)
+    })
+    return(ff_values)
 }
