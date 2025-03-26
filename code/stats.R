@@ -17,16 +17,18 @@ create_fitting_data <- function(residue_data, reg_model) {
 
 #' create dataframe with endpoints required by FOCUS Kinetics 2014
 #'
+#' @param model_type string determining the kinetic model type
 #' @param reg_model nonlinear regression model
 #' @param fitting_data dataframe containing observation, prediction and residuals
 #' @return endpoint_data; dataframe containing endpoints
-create_endpoint_data <- function(reg_model, fitting_data) {
+create_endpoint_data <- function(model_type, reg_model, fitting_data) {
     endpoint_data <- data.frame(
         row.names = c(unique(fitting_data$compound)),
-        DT50 = get_DT_values(reg_model, fitting_data, 2),
-        DT90 = get_DT_values(reg_model, fitting_data, 10),
+        DT50 = get_DT_values(model_type, reg_model, fitting_data, 2),
+        DT90 = get_DT_values(model_type, reg_model, fitting_data, 10),
         chi2 = get_chi2_values(fitting_data),
-        t_test = get_p_values(reg_model, fitting_data),
+        t_test_k1 = get_p_values(model_type, reg_model, fitting_data, k1 = T),
+        t_test_k2 = get_p_values(model_type, reg_model, fitting_data, k1 = F),
         ff = get_ff_values(reg_model, fitting_data)
     )
     return(endpoint_data)
@@ -57,25 +59,68 @@ get_parameters <- function(reg_model) {
 
 #' get DT values for each compound
 #'
+#' @param model_type string determining the kinetic model type
 #' @param reg_model nonlinear regression model
 #' @param fitting_data dataframe containing observation, prediction and residuals
+#' @param target_value numeric value to transform rate constant into specific degradation time
 #' @return DT_values; named numeric vector with DT value for each compound
-get_DT_values <- function(reg_model, fitting_data, target_value) {
+get_DT_values <- function(model_type, reg_model, fitting_data, target_value) {
     parameters <- get_parameters(reg_model)
     iteration <- 1
     DT_values <- sapply(unique(fitting_data$compound), function(compound_i) {
         if (iteration == 1) {
-            k <- parameters["kp", "Estimate"]
+            if (model_type %in% c("SFO", "SFO-SFO")) {
+                k <- parameters["kp", "Estimate"]
+                DT <- calculate_DT(target_value, k)
+            } else if (model_type %in% c("DFOP", "DFOP-SFO")) {
+                DT <- calculate_DFOP_DT(reg_model, target_value)
+            } else {
+                stop("Invalid model type. Valid model types: SFO, DFOP, SFO-SFO, DFOP-SFO")
+            }
         } else {
             k <- parameters["km", "Estimate"]
+            DT <- calculate_DT(target_value, k)
         }
-        DT <- round(
-            log(target_value)/k,
-            3)
         iteration <<- iteration + 1
         return(DT)
     })
     return(DT_values)
+}
+
+    
+#' calculate degradation time for SFO model
+#'
+#' @param target_value numeric value to transform rate constant into specific degradation time
+#' @param k numeric value for rate constant
+#' @return DT; numeric value for degradation time
+calculate_DT <- function(target_value, k) {
+    DT <- round(
+        log(target_value)/k,
+        3)
+    return(DT)
+}
+
+
+#' calculate degradation time for DFOP model
+#'
+#' @param reg_model nonlinear regression model
+#' @param target_value numeric value to transform rate constant into specific degradation time
+#' @return DT; numeric value for degradation time
+calculate_DFOP_DT <- function(reg_model, target_value) {
+    if (target_value == 2) {
+        model_func <- model_dfop_DT50
+    } else {
+        model_func <- model_dfop_DT90
+    }
+    model_parms <- set_model_parms(reg_model, model_func)
+    decay_time <- uniroot(model_func, interval = c(0, 1000), 
+                          Cp0 = model_parms["Cp0"], 
+                          kp1 = model_parms["kp1"], 
+                          kp2 = model_parms["kp2"], 
+                          g = model_parms["g"]
+                          )
+    DT <- decay_time$root
+    return(DT)
 }
 
 
@@ -138,17 +183,39 @@ calculate_chi2 <- function(predicted, observed, error_percentage) {
 
 #' get p values for each compound
 #'
+#' @param model_type string determining the kinetic model type
 #' @param reg_model nonlinear regression model
 #' @param fitting_data dataframe containing observation, prediction and residuals
+#' @param k1 boolean determining rate selection
 #' @return p_values; named numeric vector with p value for each compound
-get_p_values <- function(reg_model, fitting_data) {
+get_p_values <- function(model_type, reg_model, fitting_data, k1) {
     parameters <- get_parameters(reg_model)
     iteration <- 1
     p_values <- sapply(unique(fitting_data$compound), function(compound_i) {
         if (iteration == 1) {
-            p <- formatC(parameters["kp", "Pr(>|t|)"], format = "E", digits = 2)
+            if (k1 == T) {
+                if (model_type %in% c("SFO", "SFO-SFO")) {
+                    p <- formatC(parameters["kp", "Pr(>|t|)"], format = "E", digits = 2)
+                } else if (model_type %in% c("DFOP", "DFOP-SFO")) {
+                    p <- formatC(parameters["kp1", "Pr(>|t|)"], format = "E", digits = 2)
+                } else {
+                    stop("Invalid model type. Valid model types: SFO, DFOP, SFO-SFO, DFOP-SFO")
+                }
+            } else {
+                if (model_type %in% c("SFO", "SFO-SFO")) {
+                    p <- "-"
+                } else if (model_type %in% c("DFOP", "DFOP-SFO")) {
+                    p <- formatC(parameters["kp2", "Pr(>|t|)"], format = "E", digits = 2)
+                } else {
+                    stop("Invalid model type. Valid model types: SFO, DFOP, SFO-SFO, DFOP-SFO")
+                }
+            }
         } else {
-            p <- formatC(parameters["km", "Pr(>|t|)"], format = "E", digits = 2)
+            if (k1 == T) {
+                p <- formatC(parameters["km", "Pr(>|t|)"], format = "E", digits = 2)
+            } else {
+                p <- "-"
+            }
         }
         iteration <<- iteration + 1
         return(p)

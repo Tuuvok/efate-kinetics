@@ -51,6 +51,30 @@ model_dfop_sfo <- function(time, Cp0, kp1, kp2, g, km, kfm) {
 }
 
 
+#' modified DFOP model for back-calculating DT50
+#'
+#' @param time elapsed time
+#' @param Cp0 initial concentration of parent
+#' @param kp1 degradation rate of parent compartment 1
+#' @param kp2 degradation rate of parent compartment 2
+#' @param g fraction of Cp0 applied to compartment 1
+model_dfop_DT50 <- function(time, Cp0, kp1, kp2, g) {
+    Cp0 * ((g * exp(-kp1 * time)) + ((1-g) * exp(-kp2 * time))) - Cp0 / 2
+}
+
+
+#' modified DFOP model for back-calculating DT90
+#'
+#' @param time elapsed time
+#' @param Cp0 initial concentration of parent
+#' @param kp1 degradation rate of parent compartment 1
+#' @param kp2 degradation rate of parent compartment 2
+#' @param g fraction of Cp0 applied to compartment 1
+model_dfop_DT90 <- function(time, Cp0, kp1, kp2, g) {
+    Cp0 * ((g * exp(-kp1 * time)) + ((1-g) * exp(-kp2 * time))) - Cp0 / 10
+}
+
+
 #' determine the parameters of a selected kinetic model running nlsLM
 #'
 #' @param residue_data dataframe containing time and concentration measurements
