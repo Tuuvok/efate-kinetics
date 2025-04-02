@@ -1,8 +1,37 @@
 #' get residue data defined by user
 #'
+#' @param path_list list of strings with file and directory paths
 #' @return residue_data; dataframe containing time and concentration measurements
-get_residue_data <- function() {
-    residue_data <- read.table(file.choose(), header = TRUE, sep = "\t")
+get_residue_data <- function(path_list) {
+    
+    residue_data_path <- path_list$residue_data_path
+    if (length(residue_data_path) == 0) {
+        stop("No residue data file was selected. Exiting.")
+    }
+    
+    residue_data <- tryCatch(
+        read.table(residue_data_path, header = TRUE, sep = "\t", check.names = FALSE),
+        error = function(e) stop("Error in reading the file. Make sure it is tab-separated and contains a header.")
+    )
+    
+    num_columns <- ncol(residue_data)
+    if (!(num_columns == 2 || num_columns == 3)) {
+        stop(paste("Invalid file structure: Expected 2 or 3 columns, but found", num_columns, "columns."))
+    }
+    
+    expected_first_column <- "time"
+    if (colnames(residue_data)[1] != expected_first_column) {
+        stop(paste("Invalid header: The first column must be named '", expected_first_column, "'.", sep = ""))
+    }
+    
+    if (any(nchar(colnames(residue_data)[-1]) == 0)) {
+        stop("Invalid header: Column headers (other than 'time') must not be empty.")
+    }
+    
+    if (!all(sapply(residue_data[-1], is.numeric))) {
+        stop("Invalid residue data: All entries (excluding the header) must contain numeric values.")
+    }
+    
     return(residue_data)
 }
 
@@ -45,9 +74,16 @@ get_compound_data <- function(residue_data) {
 
 #' get setup data defined by user
 #'
+#' @param path_list list of strings with file and directory paths
 #' @return user_setup_data; string with setup data provided by user
-get_user_setup_data <- function() {
-    user_setup_data <- file.choose() |> 
+get_user_setup_data <- function(path_list) {
+    
+    user_setup_data_path <- path_list$user_setup_data_path
+    if (length(user_setup_data_path) == 0) {
+        stop("No setup data file was selected. Exiting.")
+    }
+    
+    user_setup_data <- user_setup_data_path |> 
         readLines() |> 
         (\(x) x[!grepl("^#", x)])() |>  # remove lines starting with #
         trimws() |>                     # trim whitespace
