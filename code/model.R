@@ -51,6 +51,30 @@ model_dfop_sfo <- function(time, Cp0, kp1, kp2, g, km, kfm) {
 }
 
 
+#' modified DFOP model for back-calculating DT50
+#'
+#' @param time elapsed time
+#' @param Cp0 initial concentration of parent
+#' @param kp1 degradation rate of parent compartment 1
+#' @param kp2 degradation rate of parent compartment 2
+#' @param g fraction of Cp0 applied to compartment 1
+model_dfop_DT50 <- function(time, Cp0, kp1, kp2, g) {
+    Cp0 * ((g * exp(-kp1 * time)) + ((1-g) * exp(-kp2 * time))) - Cp0 / 2
+}
+
+
+#' modified DFOP model for back-calculating DT90
+#'
+#' @param time elapsed time
+#' @param Cp0 initial concentration of parent
+#' @param kp1 degradation rate of parent compartment 1
+#' @param kp2 degradation rate of parent compartment 2
+#' @param g fraction of Cp0 applied to compartment 1
+model_dfop_DT90 <- function(time, Cp0, kp1, kp2, g) {
+    Cp0 * ((g * exp(-kp1 * time)) + ((1-g) * exp(-kp2 * time))) - Cp0 / 10
+}
+
+
 #' determine the parameters of a selected kinetic model running nlsLM
 #'
 #' @param residue_data dataframe containing time and concentration measurements
@@ -90,35 +114,6 @@ fit_model <- function(residue_data, setup_data) {
     )
     
     return(reg_model)
-}
-
-
-#' select boundary conditions for estimated kinetic model parameters
-#'
-#' @param model_type string determining the kinetic model type
-#' @param observation_data vector containing concentration measurements of all compounds
-#' @return bounds_data; list containing boundary conditions for estimated kinetic model parameters
-select_bounds <- function(model_type, observation_data) {
-    bounds_data <- list(
-        lower = NULL,
-        upper = NULL
-    )
-    if (model_type == "SFO") {
-        bounds_data$lower <- c(Cp0 = 0, kp = 0)
-        bounds_data$upper <- c(Cp0 = max(observation_data * 2), kp = 10)
-    } else if (model_type == "DFOP") {
-        bounds_data$lower <- c(Cp0 = 0, kp1 = 0, kp2 = 0, g = 0)
-        bounds_data$upper <- c(Cp0 = max(observation_data * 2), kp1 = 10, kp2 = 10, g = 2)
-    } else if (model_type == "SFO-SFO") {
-        bounds_data$lower <- c(Cp0 = 0, kp = 0, km = 0, kfm = 0)
-        bounds_data$upper <- c(Cp0 = max(observation_data * 2), kp = 10, km = 10, kfm = 10)
-    } else if (model_type == "DFOP-SFO") {
-        bounds_data$lower <- c(Cp0 = 0, kp1 = 0, kp2 = 0, g = 0, km = 0, kfm = 0)
-        bounds_data$upper <- c(Cp0 = max(observation_data * 2), kp1 = 10, kp2 = 10, g = 2, km = 10, kfm = 10)
-    } else {
-        stop("Invalid model type. Valid model types: SFO, DFOP, SFO-SFO, DFOP-SFO")
-    }
-    return(bounds_data)
 }
     
 
@@ -178,4 +173,33 @@ get_default_control_parms <- function() {
         factor = 100,
         maxiter = 200
     )
+}
+
+
+#' select boundary conditions for estimated kinetic model parameters
+#'
+#' @param model_type string determining the kinetic model type
+#' @param observation_data vector containing concentration measurements of all compounds
+#' @return bounds_data; list containing boundary conditions for estimated kinetic model parameters
+select_bounds <- function(model_type, observation_data) {
+    bounds_data <- list(
+        lower = NULL,
+        upper = NULL
+    )
+    if (model_type == "SFO") {
+        bounds_data$lower <- c(Cp0 = 0, kp = 0)
+        bounds_data$upper <- c(Cp0 = max(observation_data * 2), kp = 10)
+    } else if (model_type == "DFOP") {
+        bounds_data$lower <- c(Cp0 = 0, kp1 = 0, kp2 = 0, g = 0)
+        bounds_data$upper <- c(Cp0 = max(observation_data * 2), kp1 = 10, kp2 = 10, g = 2)
+    } else if (model_type == "SFO-SFO") {
+        bounds_data$lower <- c(Cp0 = 0, kp = 0, km = 0, kfm = 0)
+        bounds_data$upper <- c(Cp0 = max(observation_data * 2), kp = 10, km = 10, kfm = 10)
+    } else if (model_type == "DFOP-SFO") {
+        bounds_data$lower <- c(Cp0 = 0, kp1 = 0, kp2 = 0, g = 0, km = 0, kfm = 0)
+        bounds_data$upper <- c(Cp0 = max(observation_data * 2), kp1 = 10, kp2 = 10, g = 2, km = 10, kfm = 10)
+    } else {
+        stop("Invalid model type. Valid model types: SFO, DFOP, SFO-SFO, DFOP-SFO")
+    }
+    return(bounds_data)
 }
