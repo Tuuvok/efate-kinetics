@@ -7,25 +7,33 @@ library(ggplot2)
 #' main function run by user
 #'
 run_kinetics <- function() {
-    # read and prepare input
-    path_list <- create_path_list()
-    residue_data <- get_residue_data(path_list)
-    user_setup_data <- get_user_setup_data(path_list)
-    setup_data <- create_setup_data(user_setup_data)
-    model_type <- setup_data$model_type
-    # fit model
-    reg_model <- fit_model(residue_data, setup_data)
-    # extract output and run additional stats
-    fitting_data <- create_fitting_data(residue_data, reg_model)
-    endpoint_data <- create_endpoint_data(model_type, reg_model, fitting_data)
-    iteration_data <- create_iteration_data(reg_model)
-    plot_data <- create_plot_data(fitting_data)
-    smooth_data <- create_smooth_data(model_type, reg_model, plot_data)
-    fit_graph <- create_fit_graph(model_type, plot_data, smooth_data)
-    # prepare and write output
-    output_list <- generate_output_list(residue_data, model_type, reg_model, fitting_data)
-    write_output(path_list, output_list)
-    write_graph(path_list, model_type, fit_graph)
+    
+    tryCatch({
+        # read and prepare input
+        path_list <- create_path_list()
+        residue_data <- get_residue_data(path_list)
+        user_setup_data <- get_user_setup_data(path_list)
+        setup_data <- create_setup_data(user_setup_data)
+        model_type <- setup_data$model_type
+        # fit model
+        reg_model <- fit_model(residue_data, setup_data)
+        # extract output and run additional stats
+        fitting_data <- create_fitting_data(residue_data, reg_model)
+        endpoint_data <- create_endpoint_data(model_type, reg_model, fitting_data)
+        iteration_data <- create_iteration_data(reg_model)
+        plot_data <- create_plot_data(fitting_data)
+        smooth_data <- create_smooth_data(model_type, reg_model, plot_data)
+        fit_graph <- create_fit_graph(model_type, plot_data, smooth_data)
+        # prepare and write output
+        output_list <- generate_output_list(residue_data, model_type, reg_model, fitting_data)
+        write_output(path_list, model_type, output_list)
+        write_graph(path_list, model_type, fit_graph)
+        message("Done!")
+    }, 
+    error = function(e) {
+        message("Error: ", conditionMessage(e))
+    })
+    
 }
 
 

@@ -19,10 +19,11 @@ generate_output_list <- function(residue_data, model_type, reg_model, fitting_da
 #' write output list into text file
 #'
 #' @param path_list list of strings with file and directory paths
+#' @param model_type string determining the kinetic model type
 #' @param output_list list containing model output for user (parameters etc.)
-write_output <- function(path_list, output_list) {
+write_output <- function(path_list, model_type, output_list) {
     
-    output_path <- file.path(path_list$output_path, paste0(model_type, "_results.txt"))
+    output_path <- file.path(path_list$output_path, paste0("results_", model_type, ".txt"))
     
     if (length(output_path) == 0) {
         stop("No output path was selected. Exiting.")
