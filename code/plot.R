@@ -66,13 +66,13 @@ set_model_parms <- function(reg_model, model_func) {
 #' @param model_type string determining the kinetic model type
 #' @param plot_data dataframe containing observation
 #' @param smooth_data dataframe containing prediction on a fine time scale
-#' @return fit_graph; plot with observation and prediction
-create_fit_graph <- function(model_type, plot_data, smooth_data) {
+#' @return graph; plot with observation and prediction
+create_graph <- function(model_type, plot_data, smooth_data) {
 
     unique_compounds <- unique(plot_data$compound)
     colors <- setNames(c("black", "darkgray", "black", "darkgray"), unique_compounds)
     
-    fit_graph <- ggplot() +
+    graph <- ggplot() +
         geom_point(data = plot_data, 
                    aes(x = time, 
                        y = observation, 
@@ -100,5 +100,5 @@ create_fit_graph <- function(model_type, plot_data, smooth_data) {
             axis.title.y = element_text(margin = margin(r = 10))
         )
     
-    return(fit_graph)
+    return(graph)
 }

@@ -1,3 +1,14 @@
+#' create dataframe with parameters of regression model
+#'
+#' @param reg_model nonlinear regression model
+#' @return parameter_data; dataframe containing model estimates and statistics
+create_parameter_data <- function(reg_model) {
+    reg_model_summary <- summary(reg_model)
+    parameter_data <- reg_model_summary$coefficients
+    return(parameter_data)
+}
+
+
 #' create dataframe with observation, prediction and residuals
 #'
 #' @param residue_data dataframe containing time and concentration measurements
@@ -43,17 +54,6 @@ create_iteration_data <- function(reg_model) {
     iteration_data <- c(reg_model$convInfo$finIter, reg_model$convInfo$finTol)
     names(iteration_data) <- c("iterations to convergence", "convergence tolerance")
     return(iteration_data)
-}
-
-
-#' get parameters of regression model
-#'
-#' @param reg_model nonlinear regression model
-#' @return parameters; dataframe containing model estimates and statistics
-get_parameters <- function(reg_model) {
-    reg_model_summary <- summary(reg_model)
-    parameters <- reg_model_summary$coefficients
-    return(parameters)
 }
 
 

@@ -1,10 +1,9 @@
 #' get residue data defined by user
 #'
-#' @param path_list list of strings with file and directory paths
+#' @param residue_data_path string with path to residue data
 #' @return residue_data; dataframe containing time and concentration measurements
-get_residue_data <- function(path_list) {
+get_residue_data <- function(residue_data_path) {
     
-    residue_data_path <- path_list$residue_data_path
     if (length(residue_data_path) == 0) {
         stop("No residue data file was selected. Exiting.")
     }
@@ -74,11 +73,10 @@ get_compound_data <- function(residue_data) {
 
 #' get setup data defined by user
 #'
-#' @param path_list list of strings with file and directory paths
+#' @param user_setup_data_path string with path to user setup data
 #' @return user_setup_data; string with setup data provided by user
-get_user_setup_data <- function(path_list) {
+get_user_setup_data <- function(user_setup_data_path) {
     
-    user_setup_data_path <- path_list$user_setup_data_path
     if (length(user_setup_data_path) == 0) {
         stop("No setup data file was selected. Exiting.")
     }
