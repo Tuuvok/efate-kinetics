@@ -243,3 +243,14 @@ get_ff_values <- function(reg_model, fitting_data) {
     })
     return(ff_values)
 }
+
+
+#' get parameters of regression model
+#'
+#' @param reg_model nonlinear regression model
+#' @return parameters; dataframe containing model estimates and statistics
+get_parameters <- function(reg_model) {
+    reg_model_summary <- summary(reg_model)
+    parameters <- reg_model_summary$coefficients
+    return(parameters)
+}
