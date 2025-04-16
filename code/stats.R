@@ -38,6 +38,7 @@ create_endpoint_data <- function(model_type, reg_model, fitting_data) {
         DT50 = get_DT_values(model_type, reg_model, fitting_data, 2),
         DT90 = get_DT_values(model_type, reg_model, fitting_data, 10),
         chi2 = get_chi2_values(fitting_data),
+        SWARC = get_SWARC_values(fitting_data),
         t_test_k1 = get_p_values(model_type, reg_model, fitting_data, k1 = T),
         t_test_k2 = get_p_values(model_type, reg_model, fitting_data, k1 = F),
         ff = get_ff_values(reg_model, fitting_data)
@@ -181,6 +182,100 @@ calculate_chi2 <- function(predicted, observed, error_percentage) {
 }
 
 
+#' get SWARC values for each compound
+#'
+#' @param fitting_data dataframe containing observation, prediction and residuals
+#' @return SWARC_values; named numeric vector with SWARC value for each compound
+get_SWARC_values <- function(fitting_data) {
+    SWARC_values <- sapply(unique(fitting_data$compound), function(compound_i) {
+        fitting_data_filtered <- fitting_data %>%
+            filter(compound == compound_i) %>%
+            group_by(time, compound) %>%
+            summarise(
+                residuals = mean(residuals),
+                .groups = 'drop'
+            )
+        fit_residuals <- fitting_data_filtered$residuals
+        time <- fitting_data_filtered$time
+        SWARC <- round(
+            calculate_SWARC(fit_residuals, time),
+            3)
+        return(SWARC)
+    })
+    return(SWARC_values)
+}
+
+
+#' calculate scaled weighted area under the residue curve
+#'
+#' @param fit_residuals numeric vector with residuals
+#' @param time numeric vector with time
+calculate_SWARC <- function(fit_residuals, time) {
+    
+    ARC <- calculate_ARC(fit_residuals, time)
+    blocks <- create_blocks(fit_residuals)
+    count <- calculate_count(blocks)
+    WARC <- calculate_WARC(ARC, count)
+    
+    SWARC <- sum(WARC) / max(time) * max(4, fit_residuals[length(fit_residuals)])
+    
+    return(SWARC)
+}
+
+
+#' calculate area under the residue curve
+#'
+#' @param fit_residuals numeric vector with residuals
+#' @param time numeric vector with time
+#' @return ARC; numeric vector with area under the residue curve
+calculate_ARC <- function(fit_residuals, time) {
+    delta_fit_residuals <- fit_residuals[-length(fit_residuals)] + fit_residuals[-1]
+    delta_time <- time[-1] - time[-length(time)]
+    ARC <- delta_fit_residuals * delta_time / 2
+    return(ARC)
+}
+
+
+#' order residuals based on their sign into blocks
+#'
+#' @param fit_residuals numeric vector with residuals
+#' @return blocks; numeric vector with sequence of blocks
+create_blocks <- function(fit_residuals) {
+    blocks <- cumsum(c(1, diff(sign(fit_residuals)) != 0))
+    return(blocks)
+}
+
+
+#' calculate count multiplicators
+#'
+#' @param blocks numeric vector with sequence of blocks
+#' @return count; numeric vector with multiplicators based on block length
+calculate_count <- function(blocks) {
+    # calculate lengths of sequences
+    segment_lengths <- rle(blocks)$lengths
+    expanded_lengths <- rep(segment_lengths, times = segment_lengths)
+    # reduce block multiplicator (n-1)
+    reduced_lengths <- expanded_lengths - 1
+    # reduce block length (n-1) for multiplication
+    indices_to_zero <- cumsum(segment_lengths)
+    reduced_lengths[indices_to_zero] <- 0
+    # adjust count vector to lenght of arc vector (intervals = residues - 1)
+    count <- reduced_lengths[-length(reduced_lengths)]
+    return(count)
+}
+
+
+#' calculate weighted area under the residue curve
+#'
+#' @param ARC numeric vector with area under the residue curve
+#' @param count numeric vector with multiplicators based on block length
+#' @return WARC; numeric vector with weighted area under the residue curve
+calculate_WARC <- function(ARC, count) {
+    WARC <- abs(ARC) * count
+    return(WARC)
+}
+
+
 #' get p values for each compound
 #'
 #' @param model_type string determining the kinetic model type
@@ -242,4 +337,15 @@ get_ff_values <- function(reg_model, fitting_data) {
         return(ff)
     })
     return(ff_values)
+}
+
+
+#' get parameters of regression model
+#'
+#' @param reg_model nonlinear regression model
+#' @return parameters; dataframe containing model estimates and statistics
+get_parameters <- function(reg_model) {
+    reg_model_summary <- summary(reg_model)
+    parameters <- reg_model_summary$coefficients
+    return(parameters)
 }

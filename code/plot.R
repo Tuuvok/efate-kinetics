@@ -77,12 +77,12 @@ create_graph <- function(model_type, plot_data, smooth_data) {
                    aes(x = time, 
                        y = observation, 
                        color = compound),
-                   size = 2) +
+                   size = 1) +
         geom_line(data = smooth_data, 
                   aes(x = time, 
                       y = prediction, 
                       color = compound),
-                  linewidth = 1) +
+                  linewidth = 0.5) +
         scale_color_manual(values = colors) +
         labs(
             title = model_type,
@@ -90,7 +90,6 @@ create_graph <- function(model_type, plot_data, smooth_data) {
             y = "Residue",
             color = "Compound"
         ) +
-        xlim(min(plot_data$time), max(plot_data$time)) +
         theme_minimal(base_size = 12) +
         theme(
             legend.position = ifelse(length(unique_compounds) > 1, "top", "none"), # hide legend for single compound
