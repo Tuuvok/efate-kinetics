@@ -90,7 +90,6 @@ create_graph <- function(model_type, plot_data, smooth_data) {
             y = "Residue",
             color = "Compound"
         ) +
-        xlim(min(plot_data$time), max(plot_data$time)) +
         theme_minimal(base_size = 12) +
         theme(
             legend.position = ifelse(length(unique_compounds) > 1, "top", "none"), # hide legend for single compound
