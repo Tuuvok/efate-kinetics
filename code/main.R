@@ -1,93 +1,166 @@
+library(R6)
 library(tcltk)
 library(minpack.lm)
 library(dplyr)
 library(ggplot2)
 
 
-#' Path Manager Class
-#'
-#' @field residue_data_path character. 
-#' @field user_setup_data_path character. 
-#' @field output_path character. 
-PathManager <- setRefClass(
-    "PathManager",
-    fields = list(
-        residue_data_path = "character",
-        user_setup_data_path = "character",
-        output_path = "character"
-    ),
-    methods = list(
-        selectPaths = function() {
-            message("Select files and output directory. If the selection dialogs are hidden, minimize your active applications.\n
-              1. Please select text file with residue data.\n
-              2. Please select text file with setup data.\n
-              3. Please select directory for output.")
-            
-            residue_data_path <<- tk_choose.files(caption = "Select text file with residue data", multi = FALSE)
-            user_setup_data_path <<- tk_choose.files(caption = "Select text file with setup data", multi = FALSE)
-            output_path <<- tk_choose.dir(caption = "Select directory for output")
-        },
-        
-        getPaths = function() {
-            return(list(
-                residue_data_path = residue_data_path,
-                user_setup_data_path = user_setup_data_path,
-                output_path = output_path
-            ))
-        },
-        
-        showPaths = function() {
-            message("Residue Data Path: ", residue_data_path)
-            message("User Setup Data Path: ", user_setup_data_path)
-            message("Output Directory: ", output_path)
-        }
-    )
+# Path Manager Class ####
+PathManager <- R6Class("PathManager",
+                       public = list(
+                           residue_data_path = NULL,
+                           user_setup_data_path = NULL,
+                           output_path = NULL,
+                           
+                           initialize = function() {
+                               self$residue_data_path <- ""
+                               self$user_setup_data_path <- ""
+                               self$output_path <- ""
+                           },
+                           
+                           selectPaths = function() {
+                               message("Select files and output directory. 
+                                       If the selection dialogs are hidden, minimize your active applications.\n",
+                                       "1. Please select text file with residue data.\n",
+                                       "2. Please select text file with setup data.\n",
+                                       "3. Please select directory for output.")
+                               
+                               # Select residue data file
+                               r_path <- tk_choose.files(caption = "Select text file with residue data", multi = FALSE)
+                               if (length(r_path) == 0 || r_path == "") {
+                                   stop("Residue data file selection was cancelled or invalid.")
+                               }
+                               if (!file.exists(r_path)) {
+                                   stop("Residue data file does not exist: ", r_path)
+                               }
+                               
+                               # Select setup data file
+                               u_path <- tk_choose.files(caption = "Select text file with setup data", multi = FALSE)
+                               if (length(u_path) == 0 || u_path == "") {
+                                   stop("Setup data file selection was cancelled or invalid.")
+                               }
+                               if (!file.exists(u_path)) {
+                                   stop("Setup data file does not exist: ", u_path)
+                               }
+                               
+                               # Select output directory
+                               o_path <- tk_choose.dir(caption = "Select directory for output")
+                               if (is.null(o_path) || o_path == "") {
+                                   stop("Output directory selection was cancelled or invalid.")
+                               }
+                               if (!dir.exists(o_path)) {
+                                   stop("Output directory does not exist: ", o_path)
+                               }
+                               
+                               # Assign validated paths
+                               self$residue_data_path <- r_path
+                               self$user_setup_data_path <- u_path
+                               self$output_path <- o_path
+                           },
+                           
+                           getPaths = function() {
+                               list(
+                                   residue_data_path = self$residue_data_path,
+                                   user_setup_data_path = self$user_setup_data_path,
+                                   output_path = self$output_path
+                               )
+                           },
+                           
+                           showPaths = function() {
+                               message("Residue Data Path: ", self$residue_data_path)
+                               message("User Setup Data Path: ", self$user_setup_data_path)
+                               message("Output Directory: ", self$output_path)
+                           }
+                       )
 )
 
 
-#' Residue Manager Class
-#'
-#' @field data data.frame. 
-ResidueManager <- setRefClass(
-    "ResidueManager",
-    fields = list(data = "data.frame"),
-    methods = list(
-        loadData = function(residue_data_path) {
-            data <<- get_residue_data(residue_data_path)
-        },
-        getData = function() {
-            return(data)
-        }
-    )
+# Residue Manager Class ####
+ResidueManager <- R6Class("ResidueManager",
+                          public = list(
+                              data = NULL,
+                              
+                              initialize = function() {
+                                  self$data <- data.frame()
+                              },
+                              
+                              loadData = function(residue_data_path) {
+                                  if (!file.exists(residue_data_path)) {
+                                      stop("The file does not exist: ", residue_data_path)
+                                  }
+                                  
+                                  result <- tryCatch({
+                                      get_residue_data(residue_data_path)
+                                  }, error = function(e) {
+                                      stop("Failed to load residue data: ", e$message)
+                                  })
+                                  
+                                  if (!is.data.frame(result)) {
+                                      stop("get_residue_data() did not return a data.frame")
+                                  }
+                                  
+                                  self$data <- result
+                              },
+                              
+                              getData = function() {
+                                  self$data
+                              }
+                          )
 )
 
 
-#' Setup Manager Class
-#'
-#' @field data list. 
-#' @field model_type character. 
-SetupManager <- setRefClass(
-    "SetupManager",
-    fields = list(data = "list", model_type = "character"),
-    methods = list(
-        prepareSetup = function(user_setup_data_path) {
-            user_data <- get_user_setup_data(user_setup_data_path)
-            data <<- create_setup_data(user_data)
-            model_type <<- data$model_type
-        },
-        
-        getSetup = function() {
-            return(data)
-        },
-        
-        getModelType = function() {
-            return(model_type)
-        }
-    )
+# Setup Manager Class ####
+SetupManager <- R6Class("SetupManager",
+                        public = list(
+                            data = NULL,
+                            model_type = NULL,
+                            
+                            initialize = function() {
+                                self$data <- list()
+                                self$model_type <- ""
+                            },
+                            
+                            prepareSetup = function(user_setup_data_path) {
+                                if (!file.exists(user_setup_data_path)) {
+                                    stop("The file does not exist: ", user_setup_data_path)
+                                }
+                                
+                                user_data <- tryCatch({
+                                    get_user_setup_data(user_setup_data_path)
+                                }, error = function(e) {
+                                    stop("Failed to load user setup data: ", e$message)
+                                })
+                                
+                                setup <- tryCatch({
+                                    create_setup_data(user_data)
+                                }, error = function(e) {
+                                    stop("Failed to create setup data: ", e$message)
+                                })
+                                
+                                if (!is.list(setup)) {
+                                    stop("create_setup_data() did not return a list")
+                                }
+                                
+                                if (!"model_type" %in% names(setup)) {
+                                    stop("setup data does not contain 'model_type'")
+                                }
+                                
+                                self$data <- setup
+                                self$model_type <- setup$model_type
+                            },
+                            
+                            getSetup = function() {
+                                self$data
+                            },
+                            
+                            getModelType = function() {
+                                self$model_type
+                            }
+                        )
 )
 
 
-#' Model Manager Class
+# Model Manager Class
 #'
 #' @field reg_model ANY. 
 #' @field parameter_data matrix. 
