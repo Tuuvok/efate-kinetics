@@ -252,3 +252,40 @@ OutputManager <- R6Class("OutputManager",
                              }
                          )
 )
+
+
+# User Function ####
+run_kinetics <- function() {
+    
+    tryCatch({
+        
+        path_manager <- PathManager$new()
+        path_manager$selectPaths()
+        paths <- path_manager$getPaths()
+        
+        residue_manager <- ResidueManager$new()
+        residue_manager$loadResidueData(paths$residue_data_path)
+        residue_data <- residue_manager$getResidueData()
+        
+        setup_manager <- SetupManager$new()
+        setup_manager$loadSetupData(paths$user_setup_data_path)
+        setup_data <- setup_manager$getSetupData()
+        model_type <- setup_manager$getModelType()
+        
+        model_manager <- ModelManager$new()
+        model_manager$fitModel(residue_data, setup_data)
+        model_manager$processData(model_type, residue_data)
+        results <- model_manager$getResults()
+        graph <- model_manager$getGraph()
+        
+        output_manager <- OutputManager$new(paths$output_path, model_type)
+        output_manager$writeOutput(results, graph)
+        
+        message("Done!")
+    },
+    
+    error = function(e) {
+        message("Error: ", conditionMessage(e))
+    })
+    
+}
