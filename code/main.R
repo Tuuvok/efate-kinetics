@@ -25,7 +25,6 @@ PathManager <- R6Class("PathManager",
                                        "2. Please select text file with setup data.\n",
                                        "3. Please select directory for output.")
                                
-                               # Select residue data file
                                r_path <- tk_choose.files(caption = "Select text file with residue data", multi = FALSE)
                                if (length(r_path) == 0 || r_path == "") {
                                    stop("Residue data file selection was cancelled or invalid.")
@@ -34,7 +33,6 @@ PathManager <- R6Class("PathManager",
                                    stop("Residue data file does not exist: ", r_path)
                                }
                                
-                               # Select setup data file
                                u_path <- tk_choose.files(caption = "Select text file with setup data", multi = FALSE)
                                if (length(u_path) == 0 || u_path == "") {
                                    stop("Setup data file selection was cancelled or invalid.")
@@ -43,7 +41,6 @@ PathManager <- R6Class("PathManager",
                                    stop("Setup data file does not exist: ", u_path)
                                }
                                
-                               # Select output directory
                                o_path <- tk_choose.dir(caption = "Select directory for output")
                                if (is.null(o_path) || o_path == "") {
                                    stop("Output directory selection was cancelled or invalid.")
@@ -52,7 +49,6 @@ PathManager <- R6Class("PathManager",
                                    stop("Output directory does not exist: ", o_path)
                                }
                                
-                               # Assign validated paths
                                self$residue_data_path <- r_path
                                self$user_setup_data_path <- u_path
                                self$output_path <- o_path
@@ -78,32 +74,32 @@ PathManager <- R6Class("PathManager",
 # Residue Manager Class ####
 ResidueManager <- R6Class("ResidueManager",
                           public = list(
-                              data = NULL,
+                              residue_data = NULL,
                               
                               initialize = function() {
-                                  self$data <- data.frame()
+                                  self$residue_data <- data.frame()
                               },
                               
-                              loadData = function(residue_data_path) {
+                              loadResidueData = function(residue_data_path) {
                                   if (!file.exists(residue_data_path)) {
                                       stop("The file does not exist: ", residue_data_path)
                                   }
                                   
-                                  result <- tryCatch({
+                                  residue_data <- tryCatch({
                                       get_residue_data(residue_data_path)
                                   }, error = function(e) {
                                       stop("Failed to load residue data: ", e$message)
                                   })
                                   
-                                  if (!is.data.frame(result)) {
+                                  if (!is.data.frame(residue_data)) {
                                       stop("get_residue_data() did not return a data.frame")
                                   }
                                   
-                                  self$data <- result
+                                  self$residue_data <- residue_data
                               },
                               
-                              getData = function() {
-                                  self$data
+                              getResidueData = function() {
+                                  self$residue_data
                               }
                           )
 )
@@ -112,45 +108,45 @@ ResidueManager <- R6Class("ResidueManager",
 # Setup Manager Class ####
 SetupManager <- R6Class("SetupManager",
                         public = list(
-                            data = NULL,
+                            setup_data = NULL,
                             model_type = NULL,
                             
                             initialize = function() {
-                                self$data <- list()
+                                self$setup_data <- list()
                                 self$model_type <- ""
                             },
                             
-                            prepareSetup = function(user_setup_data_path) {
+                            loadSetupData = function(user_setup_data_path) {
                                 if (!file.exists(user_setup_data_path)) {
                                     stop("The file does not exist: ", user_setup_data_path)
                                 }
                                 
-                                user_data <- tryCatch({
+                                user_setup_data <- tryCatch({
                                     get_user_setup_data(user_setup_data_path)
                                 }, error = function(e) {
                                     stop("Failed to load user setup data: ", e$message)
                                 })
                                 
-                                setup <- tryCatch({
-                                    create_setup_data(user_data)
+                                setup_data <- tryCatch({
+                                    create_setup_data(user_setup_data)
                                 }, error = function(e) {
                                     stop("Failed to create setup data: ", e$message)
                                 })
                                 
-                                if (!is.list(setup)) {
+                                if (!is.list(setup_data)) {
                                     stop("create_setup_data() did not return a list")
                                 }
                                 
-                                if (!"model_type" %in% names(setup)) {
+                                if (!"model_type" %in% names(setup_data)) {
                                     stop("setup data does not contain 'model_type'")
                                 }
                                 
-                                self$data <- setup
-                                self$model_type <- setup$model_type
+                                self$setup_data <- setup_data
+                                self$model_type <- setup_data$model_type
                             },
                             
-                            getSetup = function() {
-                                self$data
+                            getSetupData = function() {
+                                self$setup_data
                             },
                             
                             getModelType = function() {
