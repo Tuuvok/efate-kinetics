@@ -156,109 +156,99 @@ SetupManager <- R6Class("SetupManager",
 )
 
 
-# Model Manager Class
-#'
-#' @field reg_model ANY. 
-#' @field parameter_data matrix. 
-#' @field fitting_data data.frame. 
-#' @field endpoint_data data.frame. 
-#' @field iteration_data numeric. 
-#' @field plot_data data.frame. 
-#' @field smooth_data data.frame. 
-#' @field graph ANY. 
-ModelManager <- setRefClass(
-    "ModelManager",
-    fields = list(
-        reg_model = "ANY",
-        parameter_data = "matrix",
-        fitting_data = "data.frame",
-        endpoint_data = "data.frame",
-        iteration_data = "numeric",
-        plot_data = "data.frame",
-        smooth_data = "data.frame",
-        graph = "ANY"
-    ),
-    methods = list(
-        fitModel = function(residue_data, setup_data) {
-            reg_model <<- fit_model(residue_data, setup_data)
-        },
-        
-        processData = function(model_type, residue_data) {
-            parameter_data <<- create_parameter_data(reg_model)
-            fitting_data <<- create_fitting_data(residue_data, reg_model)
-            endpoint_data <<- create_endpoint_data(model_type, reg_model, fitting_data)
-            iteration_data <<- create_iteration_data(reg_model)
-            plot_data <<- create_plot_data(fitting_data)
-            smooth_data <<- create_smooth_data(model_type, reg_model, plot_data)
-            graph <<- create_graph(model_type, plot_data, smooth_data)
-        },
-        
-        getResults = function() {
-            return(list(
-                parameter_data = parameter_data,
-                fitting_data = fitting_data,
-                endpoint_data = endpoint_data,
-                iteration_data = iteration_data
-                # plot_data = plot_data,
-                # smooth_data = smooth_data,
-                # fit_graph = fit_graph
-            ))
-        },
-        
-        getGraph = function() {
-            return(graph)
-        }
-    )
+# Model Manager Class ####
+ModelManager <- R6Class("ModelManager",
+                        public = list(
+                            reg_model = NULL,
+                            parameter_data = NULL,
+                            fitting_data = NULL,
+                            endpoint_data = NULL,
+                            iteration_data = NULL,
+                            plot_data = NULL,
+                            smooth_data = NULL,
+                            graph = NULL,
+                            
+                            initialize = function() {
+                                self$reg_model <- NULL
+                                self$parameter_data <- matrix()
+                                self$fitting_data <- data.frame()
+                                self$endpoint_data <- data.frame()
+                                self$iteration_data <- numeric()
+                                self$plot_data <- data.frame()
+                                self$smooth_data <- data.frame()
+                                self$graph <- NULL
+                            },
+                            
+                            fitModel = function(residue_data, setup_data) {
+                                tryCatch({
+                                    if (is.null(residue_data) || is.null(setup_data)) {
+                                        stop("Both `residue_data` and `setup_data` must be provided.")
+                                    }
+                                    self$reg_model <- fit_model(residue_data, setup_data)
+                                }, error = function(e) {
+                                    message("Error in fitModel: ", e$message)
+                                })
+                            },
+                            
+                            processData = function(model_type, residue_data) {
+                                tryCatch({
+                                    if (is.null(self$reg_model)) stop("Model must be fitted before processing data.")
+                                    if (is.null(model_type) || is.null(residue_data)) {
+                                        stop("`model_type` and `residue_data` must be provided.")
+                                    }
+                                    
+                                    self$parameter_data <- create_parameter_data(self$reg_model)
+                                    self$fitting_data <- create_fitting_data(residue_data, self$reg_model)
+                                    self$endpoint_data <- create_endpoint_data(model_type, self$reg_model, self$fitting_data)
+                                    self$iteration_data <- create_iteration_data(self$reg_model)
+                                    self$plot_data <- create_plot_data(self$fitting_data)
+                                    self$smooth_data <- create_smooth_data(model_type, self$reg_model, self$plot_data)
+                                    self$graph <- create_graph(model_type, self$plot_data, self$smooth_data)
+                                }, error = function(e) {
+                                    message("Error in processData: ", e$message)
+                                })
+                            },
+                            
+                            getResults = function() {
+                                return(list(
+                                    parameter_data = self$parameter_data,
+                                    fitting_data = self$fitting_data,
+                                    endpoint_data = self$endpoint_data,
+                                    iteration_data = self$iteration_data
+                                ))
+                            },
+                            
+                            getGraph = function() {
+                                return(self$graph)
+                            }
+                        )
 )
 
 
-#' Output Manager Class
-#'
-OutputManager <- setRefClass(
-    "OutputManager",
-    methods = list(
-        writeOutput = function(output_path, model_type, results, graph) {
-            # output_list <- generate_output_list(residue_data, model_type, reg_model, fitting_data)
-            write_results(output_path, model_type, results)
-            write_graph(output_path, model_type, graph)
-        }
-    )
+# Output Manager Class ####
+OutputManager <- R6Class("OutputManager",
+                         public = list(
+                             writeOutput = function(output_path, model_type, results, graph) {
+                                 tryCatch({
+                                     if (!is.character(output_path) || length(output_path) != 1) {
+                                         stop("`output_path` must be a single string.")
+                                     }
+                                     if (!is.character(model_type) || length(model_type) != 1) {
+                                         stop("`model_type` must be a single string.")
+                                     }
+                                     if (is.null(results)) {
+                                         stop("`results` cannot be NULL.")
+                                     }
+                                     if (is.null(graph)) {
+                                         stop("`graph` cannot be NULL.")
+                                     }
+                                     
+                                     write_results(output_path, model_type, results)
+                                     write_graph(output_path, model_type, graph)
+                                     
+                                 }, error = function(e) {
+                                     message("Error in writeOutput: ", e$message)
+                                 })
+                             }
+                         )
 )
-
-
-#' User Function
-#'
-run_kinetics <- function() {
-    
-    tryCatch({
-        
-        path_manager <- PathManager$new()
-        path_manager$selectPaths()
-        paths <- path_manager$getPaths()
-        
-        residue_manager <- ResidueManager$new()
-        residue_manager$loadData(paths$residue_data_path)
-        residue_data <- residue_manager$getData()
-        
-        setup_manager <- SetupManager$new()
-        setup_manager$prepareSetup(paths$user_setup_data_path)
-        setup_data <- setup_manager$getSetup()
-        model_type <- setup_manager$getModelType()
-        
-        model_manager <- ModelManager$new()
-        model_manager$fitModel(residue_data, setup_data)
-        model_manager$processData(model_type, residue_data)
-        results <- model_manager$getResults()
-        graph <- model_manager$getGraph()
-        
-        output_manager <- OutputManager$new()
-        output_manager$writeOutput(paths$output_path, model_type, results, graph)
-        
-        message("Done!")
-    },
-    
-    error = function(e) {
-        message("Error: ", conditionMessage(e))
-    })
-    
-}
