@@ -258,7 +258,6 @@ OutputManager <- R6Class("OutputManager",
 run_kinetics <- function() {
     
     tryCatch({
-        
         path_manager <- PathManager$new()
         path_manager$selectPaths()
         paths <- path_manager$getPaths()
@@ -278,8 +277,8 @@ run_kinetics <- function() {
         results <- model_manager$getResults()
         graph <- model_manager$getGraph()
         
-        output_manager <- OutputManager$new(paths$output_path, model_type)
-        output_manager$writeOutput(results, graph)
+        output_manager <- OutputManager$new()
+        output_manager$writeOutput(paths$output_path, model_type, results, graph)
         
         message("Done!")
     },
